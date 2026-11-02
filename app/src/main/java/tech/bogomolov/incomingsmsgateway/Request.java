@@ -63,7 +63,6 @@ public class Request {
             // Never log the URL: it can carry a secret token in its path.
             Log.e("SmsGateway", "malformed url error");
             this.error = RESULT_ERROR;
-            this.errorClass = ERROR_NETWORK;
             return;
         }
 

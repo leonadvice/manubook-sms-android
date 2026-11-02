@@ -9,7 +9,8 @@ import androidx.work.WorkManager;
 
 /**
  * Fires every 30 minutes from the allow-while-idle alarm. The system keeps the app
- * awake for about 10 seconds, enough for one post with 5-second timeouts.
+ * awake for about 10 seconds; a post that does not finish in time is retried
+ * through WorkManager.
  */
 public class BeatAlarmReceiver extends BroadcastReceiver {
 

@@ -88,6 +88,16 @@ public final class Beat {
                 .enqueueUniquePeriodicWork(WATCHDOG_WORK, ExistingPeriodicWorkPolicy.KEEP, watchdog);
     }
 
+    /**
+     * Arms the alarm only when none is pending. A clock or time zone change does
+     * not move an elapsed-time alarm, so a live one is left alone.
+     */
+    static void armIfMissing(Context context) {
+        if (alarmIntent(context, PendingIntent.FLAG_NO_CREATE) == null) {
+            arm(context);
+        }
+    }
+
     /** Called by the watchdog: re-arms the alarm when it is missing or overdue. */
     static void checkAlarm(Context context) {
         long sinceLast = System.currentTimeMillis() - new ManubookSettings(context).getLastBeatAt();
@@ -129,7 +139,7 @@ public final class Beat {
      * 1, 5 and 15 minutes after tries 0, 1 and 2.
      */
     static void afterTry(Context context, int attempt, int code, ExistingWorkPolicy policy) {
-        if (code == 204 || !shouldRetry(code) || attempt >= RETRY_DELAY_MINUTES.length) {
+        if (!shouldRetry(code) || attempt >= RETRY_DELAY_MINUTES.length) {
             return;
         }
         enqueueRetry(context, attempt + 1, RETRY_DELAY_MINUTES[attempt], policy);
@@ -141,7 +151,9 @@ public final class Beat {
     }
 
     /**
-     * Posts one status beat. Blocks for at most two timeouts; call off the main thread.
+     * Posts one status beat; call off the main thread. It waits up to 1 second for
+     * the pending count, then up to 5 seconds each to connect and to read the
+     * answer, plus the DNS lookup.
      *
      * @return the HTTP status, or -1 when no answer arrived or the app is not set up
      */
@@ -206,7 +218,7 @@ public final class Beat {
     private static Integer pendingDeliveries(Context context) {
         try {
             List<WorkInfo> jobs = WorkManager.getInstance(context)
-                    .getWorkInfosByTag(RequestWorker.class.getName()).get(TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
+                    .getWorkInfosByTag(RequestWorker.class.getName()).get(1, TimeUnit.SECONDS);
             int pending = 0;
             for (WorkInfo job : jobs) {
                 WorkInfo.State state = job.getState();

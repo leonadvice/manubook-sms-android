@@ -26,7 +26,7 @@ public class BeatRearmReceiver extends BroadcastReceiver {
                 Beat.start(app);
                 break;
             default:
-                Beat.arm(app);
+                Beat.armIfMissing(app);
         }
     }
 }

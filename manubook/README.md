@@ -24,3 +24,4 @@ Manubook SMS forwards the bank SMS a family phone receives to its Manubook organ
 
 - Untested on real phones until the owner's probe: Samsung Auto Blocker, Play Protect's fraud protection for `RECEIVE_SMS`, *Allow restricted settings* on Android 15+, real beat spacing in Doze.
 - A bank notice sent by RCS or an app push never reaches an SMS app.
+- The SMS receive time is formatted by upstream with the phone's default locale. A locale with non-ASCII digits (Arabic, Persian, Burmese) would send a `receivedAt` the server refuses; Vietnamese and English are fine.

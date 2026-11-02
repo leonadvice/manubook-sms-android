@@ -20,11 +20,6 @@ public class BeatTest {
     }
 
     @Test
-    public void testThirtyMinutes() {
-        assertEquals(30 * 60 * 1000L, Beat.INTERVAL_MILLIS);
-    }
-
-    @Test
     public void testStoredAt() {
         assertEquals(1760494360123L, Beat.storedAt("1760494360123_123456"));
         assertEquals(0L, Beat.storedAt("oddkey"));

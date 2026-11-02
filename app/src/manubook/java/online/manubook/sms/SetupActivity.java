@@ -174,9 +174,6 @@ public class SetupActivity extends Activity {
             return null;
         }
         for (ForwardingConfig rule : ForwardingConfig.getAll(this)) {
-            if (!ManubookSetup.RULE_KEY.equals(rule.getKey()) || !rule.getUrl().endsWith("/batch")) {
-                continue;
-            }
             try {
                 String authorization = new JSONObject(rule.getHeaders()).getString("Authorization");
                 String smsUrl = rule.getUrl().substring(0, rule.getUrl().length() - "/batch".length());
