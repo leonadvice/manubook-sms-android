@@ -79,8 +79,11 @@ public final class Beat {
     public static void start(Context context) {
         arm(context);
         enqueueRetry(context, 0, 0, ExistingWorkPolicy.REPLACE);
+        // The first check waits an hour: a check now would race the beat just queued.
         PeriodicWorkRequest watchdog =
-                new PeriodicWorkRequest.Builder(BeatWatchdogWorker.class, 1, TimeUnit.HOURS).build();
+                new PeriodicWorkRequest.Builder(BeatWatchdogWorker.class, 1, TimeUnit.HOURS)
+                        .setInitialDelay(1, TimeUnit.HOURS)
+                        .build();
         WorkManager.getInstance(context)
                 .enqueueUniquePeriodicWork(WATCHDOG_WORK, ExistingPeriodicWorkPolicy.KEEP, watchdog);
     }
