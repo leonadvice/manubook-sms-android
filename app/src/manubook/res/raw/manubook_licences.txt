@@ -1,0 +1,13 @@
+Manubook SMS là bản sửa đổi của Incoming SMS to URL forwarder.
+
+Incoming SMS to URL forwarder
+Copyright (c) 2021 Konstantin Bogomolov
+Copyright (c) 2026 Manubook
+MIT License. https://github.com/leonadvice/manubook-sms-android
+
+Android Jetpack (AndroidX), Material Components for Android, Apache Commons Text:
+Apache License 2.0. https://www.apache.org/licenses/LICENSE-2.0
+
+Google code scanner (Google Play services):
+Android Software Development Kit License.
+https://developer.android.com/studio/terms

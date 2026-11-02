@@ -95,7 +95,9 @@ public class FailedMessageTest {
 
     @Test
     public void testRetryAllClearsStore() {
-        FailedMessage.save(context, sampleData("https://example.com", "to-retry"));
+        // An unresolvable host is a network error, which retries. A 4xx answer is
+        // final and would store the message again at once.
+        FailedMessage.save(context, sampleData("https://unreachable.invalid", "to-retry"));
         assertEquals(1, FailedMessage.getCount(context));
 
         FailedMessage.retryAll(context);

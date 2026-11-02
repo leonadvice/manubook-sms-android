@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Manubook SMS: merged over upstream's manifest (android review F5, F7, F8–F10).
+     Upstream components keep their package; tools: attributes change them here so
+     upstream's own manifest stays untouched. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Target SDK 34+: the foreground service must name its type. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
+    <application
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/manubook_data_extraction_rules"
+        android:fullBackupContent="false"
+        android:icon="@mipmap/manubook_ic_launcher"
+        android:label="@string/app_name"
+        android:networkSecurityConfig="@xml/manubook_network_security_config"
+        android:roundIcon="@mipmap/manubook_ic_launcher"
+        android:usesCleartextTraffic="false"
+        tools:replace="android:allowBackup,android:icon,android:roundIcon,android:usesCleartextTraffic">
+
+        <service
+            android:name="tech.bogomolov.incomingsmsgateway.SmsReceiverService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse"
+            tools:replace="android:exported">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Forwards incoming bank SMS to the user's own Manubook account as they arrive." />
+        </service>
+
+        <!-- Upstream's screens stay in the app but are not opened: no rule list,
+             export or log viewer for the family. -->
+        <activity
+            android:name="tech.bogomolov.incomingsmsgateway.MainActivity"
+            android:exported="false"
+            tools:replace="android:exported">
+            <intent-filter tools:node="removeAll" />
+        </activity>
+
+        <activity
+            android:name="online.manubook.sms.SetupActivity"
+            android:exported="true"
+            android:theme="@style/ManubookTheme">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <receiver
+            android:name="online.manubook.sms.BeatAlarmReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name="online.manubook.sms.BeatRearmReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

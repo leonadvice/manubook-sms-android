@@ -18,6 +18,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
+import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
@@ -28,6 +29,7 @@ import java.util.Iterator;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLException;
 
 import tech.bogomolov.incomingsmsgateway.SSLSocketFactory.TLSSocketFactory;
 
@@ -38,12 +40,18 @@ public class Request {
     private boolean useChunkedMode = true;
     private String error = null;
     private int responseCode = -1;
+    private String errorClass = null;
 
     private HttpURLConnection connection;
 
     public static final String RESULT_SUCCESS = "success";
     public static final String RESULT_ERROR = "error";
     public static final String RESULT_RETRY = "error_retry";
+
+    // Short failure classes for getErrorClass(): an HTTP status is "HTTP_<code>".
+    public static final String ERROR_NETWORK = "NETWORK";
+    public static final String ERROR_TIMEOUT = "TIMEOUT";
+    public static final String ERROR_TLS = "TLS";
 
     public Request(String urlString, String payload) {
         this.payload = payload;
@@ -52,7 +60,8 @@ public class Request {
         try {
             url = new URL(urlString);
         } catch (MalformedURLException e) {
-            Log.e("SmsGateway", "malformed url error: " + urlString);
+            // Never log the URL: it can carry a secret token in its path.
+            Log.e("SmsGateway", "malformed url error");
             this.error = RESULT_ERROR;
             return;
         }
@@ -60,8 +69,9 @@ public class Request {
         try {
             this.connection = (HttpURLConnection) url.openConnection();
         } catch (IOException e) {
-            Log.e("SmsGateway", "open connection error: " + e);
+            Log.e("SmsGateway", "open connection error: " + e.getClass().getSimpleName());
             this.error = RESULT_ERROR;
+            this.errorClass = ERROR_NETWORK;
             return;
         }
 
@@ -83,7 +93,8 @@ public class Request {
                 this.connection.setRequestProperty(key, (String) headersObj.get(key));
             }
         } catch (JSONException e) {
-            Log.e("SmsGateway", "headers error: " + e);
+            // The exception message can quote the headers, which hold credentials.
+            Log.e("SmsGateway", "headers error");
             this.error = RESULT_ERROR;
         }
     }
@@ -129,6 +140,23 @@ public class Request {
     // (malformed URL, connection failure, or not yet executed).
     public int getResponseCode() {
         return this.responseCode;
+    }
+
+    // Why the last execute() failed: "HTTP_<code>" for a non-2xx answer, or
+    // ERROR_NETWORK / ERROR_TIMEOUT / ERROR_TLS; null after a success or a
+    // configuration error such as bad headers.
+    public String getErrorClass() {
+        return this.errorClass;
+    }
+
+    // A 4xx answer means the request itself is wrong (bad body, revoked key), so
+    // resending it cannot succeed: it fails at once instead of being retried for
+    // hours. 408 (timeout) and 429 (rate limit) are temporary and retry, as do 5xx.
+    static boolean isRetryableStatus(int code) {
+        if (code == 408 || code == 429) {
+            return true;
+        }
+        return code < 400 || code >= 500;
     }
 
     @SuppressLint({"AllowAllHostnameVerifier"})
@@ -187,17 +215,31 @@ public class Request {
             }
 
             if (!isSuccess) {
-                Log.e("SmsGateway", "response code: " + this.responseCode + " for " + this.connection.getURL());
-                result = RESULT_RETRY;
+                // Host only: the full URL can carry a secret token in its path.
+                Log.e("SmsGateway", "response code: " + this.responseCode + " for " + this.connection.getURL().getHost());
+                this.errorClass = "HTTP_" + this.responseCode;
+                result = isRetryableStatus(this.responseCode) ? RESULT_RETRY : RESULT_ERROR;
             }
         } catch (NoSuchAlgorithmException e) {
             Log.e("SmsGateway", "ssl algorithm error: " + e);
+            this.errorClass = ERROR_TLS;
             result = RESULT_ERROR;
         } catch (KeyManagementException e) {
             Log.e("SmsGateway", "ssl factory error: " + e);
+            this.errorClass = ERROR_TLS;
             result = RESULT_ERROR;
+        } catch (SocketTimeoutException e) {
+            Log.e("SmsGateway", "io timeout");
+            this.errorClass = ERROR_TIMEOUT;
+            result = RESULT_RETRY;
+        } catch (SSLException e) {
+            Log.e("SmsGateway", "tls error: " + e.getClass().getSimpleName());
+            this.errorClass = ERROR_TLS;
+            result = RESULT_RETRY;
         } catch (IOException e) {
-            Log.e("SmsGateway", "io error " + e);
+            // Class name only: some IOException messages quote the URL.
+            Log.e("SmsGateway", "io error " + e.getClass().getSimpleName());
+            this.errorClass = ERROR_NETWORK;
             result = RESULT_RETRY;
         } finally {
             if (this.connection != null) {

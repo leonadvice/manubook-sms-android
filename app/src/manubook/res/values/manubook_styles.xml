@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- No action bar: the setup screen draws its own title. -->
+    <style name="ManubookTheme" parent="AppTheme">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="colorPrimary">@color/manubook_primary</item>
+        <item name="colorAccent">@color/manubook_primary</item>
+    </style>
+</resources>

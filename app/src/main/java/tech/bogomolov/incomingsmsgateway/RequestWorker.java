@@ -98,6 +98,7 @@ public class RequestWorker extends Worker {
         request.setUseChunkedMode(useChunkedMode);
 
         String result = request.execute();
+        DeliveryResult.record(getApplicationContext(), request.getResponseCode(), request.getErrorClass());
 
         if (result.equals(Request.RESULT_RETRY)) {
             return Result.retry();
