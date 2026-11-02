@@ -2,8 +2,10 @@
 # PR and push to master; upstream's instrumented tests on emulators; and a weekly
 # build of the newest upstream master merged into ours (D15). Upstream's own
 # tests.yml is left byte-identical and disabled in this fork.
-# No secret is used here: the release build is unsigned. Signing happens only in
-# manubook-release.yml, from the tag-only `release` environment.
+# No secret is used here: the release build is signed with a throwaway key made
+# for the run, so the release workflow's signing and checks run on every PR.
+# The real key is used only in manubook-release.yml, from the tag-only
+# `release` environment.
 name: Manubook CI
 
 on:
@@ -47,8 +49,22 @@ jobs:
       - name: Lint (manubook)
         run: ./gradlew lintManubookDebug
 
-      - name: Release build (manubook, unsigned)
-        run: ./gradlew assembleManubookRelease
+      - name: Release build (manubook, throwaway key)
+        run: |
+          export MANUBOOK_KEYSTORE_FILE="$RUNNER_TEMP/throwaway.jks"
+          export MANUBOOK_KEYSTORE_PASSWORD=throwaway
+          export MANUBOOK_KEY_ALIAS=throwaway
+          keytool -genkeypair -keystore "$MANUBOOK_KEYSTORE_FILE" -storetype PKCS12 \
+            -storepass "$MANUBOOK_KEYSTORE_PASSWORD" -alias "$MANUBOOK_KEY_ALIAS" \
+            -keyalg RSA -keysize 2048 -validity 1 -dname "CN=Manubook CI throwaway"
+          keytool -list -v -keystore "$MANUBOOK_KEYSTORE_FILE" -storepass "$MANUBOOK_KEYSTORE_PASSWORD" \
+            | sed -n 's/^[[:space:]]*SHA256: //p' > "$RUNNER_TEMP/throwaway-cert.txt"
+          ./gradlew assembleManubookRelease
+          apk=app/build/outputs/apk/manubook/release/app-manubook-release.apk
+          manubook/verify-apk.sh "$apk" "$RUNNER_TEMP/throwaway-cert.txt"
+          if manubook/verify-apk.sh "$apk" manubook/signing-cert-sha256.txt; then
+            echo "the check accepted a certificate other than the release one"; exit 1
+          fi
 
       - name: Upload reports
         if: always()
