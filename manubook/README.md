@@ -17,7 +17,7 @@ Manubook SMS forwards the bank SMS a family phone receives to its Manubook organ
 
 ## Scope by PR
 
-- **W6a (this release, `v0.1.0`):** the flavor, manifest, patches, the minimal setup screen (scan or paste the setup code, account numbers, SMS and notification permissions), the beat with the fields `app`, `version`, `build`, `os`, `osBuild`, `patch`, `sms`, `notify`, `battery`, `bgRestricted`, `bucket`, `pending`, `failed`, `lastError`, `lastErrorAt`, CI and the signed release. It exists for the owner's install probe on their own phone.
+- **W6a (`v0.1.0`; `v0.1.1` is the same build with a higher version, for the update rehearsal):** the flavor, manifest, patches, the minimal setup screen (scan or paste the setup code, account numbers, SMS and notification permissions), the beat with the fields `app`, `version`, `build`, `os`, `osBuild`, `patch`, `sms`, `notify`, `battery`, `bgRestricted`, `bucket`, `pending`, `failed`, `lastError`, `lastErrorAt`, CI and the signed release. It exists for the owner's install probe on their own phone.
 - **W6b:** the setup checklist and status screen (battery, never-sleeping list, unused-app pause), *Gửi thử*, the phone-side notice when a setting breaks forwarding, and the beat fields `unusedExempt`, `lastSmsAt` and `smsOff`; resending failed messages after a new key.
 
 ## Known limits
