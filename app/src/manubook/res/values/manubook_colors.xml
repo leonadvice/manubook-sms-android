@@ -3,4 +3,7 @@
     <!-- Manubook brand: deep blue primary, gold dot (docs/brand in Manubook). -->
     <color name="manubook_primary">#1157A3</color>
     <color name="manubook_gold">#E6892C</color>
+    <!-- Checklist ticks. -->
+    <color name="manubook_ok">#2E7D32</color>
+    <color name="manubook_missing">#C62828</color>
 </resources>

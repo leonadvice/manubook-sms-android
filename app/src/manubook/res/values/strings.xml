@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Manubook SMS is Vietnamese only; upstream's other locales are not built
-     (resConfigs in manubook.gradle). -->
+     (resConfigs in manubook.gradle). Samsung setting names are copied from the
+     owner's S21+ (One UI, Android 15) in Vietnamese. -->
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
     <string name="app_name">Manubook SMS</string>
     <string name="notification_channel">Manubook SMS đang chạy</string>
@@ -8,10 +9,26 @@
     <string name="manubook_status_not_set_up">Chưa cài đặt. Quét mã từ Manubook, nhập số tài khoản rồi bấm Lưu.</string>
     <string name="manubook_status_running">Đang chuyển tin nhắn ngân hàng tới Manubook.</string>
     <string name="manubook_status_no_sms">Thiếu quyền đọc tin nhắn: chưa chuyển được tin nào.</string>
-    <string name="manubook_restricted_help">Nếu điện thoại không hỏi quyền: mở Thông tin ứng dụng, bấm ⋮ ở góc trên, chọn Cho phép cài đặt bị hạn chế, rồi bật quyền Tin nhắn SMS.</string>
-    <string name="manubook_app_info">Mở Thông tin ứng dụng</string>
+    <string name="manubook_status_fix">Cần sửa cài đặt bên dưới, nếu không tin nhắn có thể không được chuyển.</string>
+    <string name="manubook_key_revoked">Mã đã bị thu hồi. Hãy gọi người cài đặt.</string>
 
-    <string name="manubook_code_title">Mã cài đặt</string>
+    <string name="manubook_last_sms">Tin gửi gần nhất: %1$s, %2$s</string>
+    <string name="manubook_last_sms_none">Chưa gửi tin nào.</string>
+    <string name="manubook_last_beat">Tín hiệu gần nhất: %1$s, %2$s</string>
+    <string name="manubook_last_beat_none">Chưa gửi tín hiệu.</string>
+    <string name="manubook_pending">%1$d tin chưa gửi, sẽ tự gửi khi có mạng.</string>
+    <string name="manubook_failed">%1$d tin Manubook chưa nhận.</string>
+    <string name="manubook_resend">Gửi lại</string>
+    <string name="manubook_resent">Đã gửi lại %1$d tin.</string>
+    <string name="manubook_answer_ok">Manubook đã nhận</string>
+    <string name="manubook_answer_none">không có mạng</string>
+    <string name="manubook_answer_code">lỗi %1$d</string>
+    <string name="manubook_version">Phiên bản %1$s</string>
+
+    <string name="manubook_checklist_title">Cài đặt</string>
+    <string name="manubook_fix">Sửa</string>
+
+    <string name="manubook_row_code">Mã cài đặt</string>
     <string name="manubook_code_none">Chưa có mã.</string>
     <string name="manubook_code_scanned">Địa chỉ ✓  Mã …%1$s ✓  Tín hiệu ✓ (chưa lưu)</string>
     <string name="manubook_code_saved">Đã lưu mã …%1$s</string>
@@ -21,23 +38,36 @@
     <string name="manubook_code_wrong">Mã không đúng, hãy mở lại hộp mã trên Manubook.</string>
     <string name="manubook_need_code">Hãy quét mã trước.</string>
 
-    <string name="manubook_accounts_title">Số tài khoản</string>
+    <string name="manubook_row_accounts">Số tài khoản</string>
+    <string name="manubook_accounts_none">Chưa có số tài khoản.</string>
     <string name="manubook_account_hint">Số tài khoản (chỉ chữ số)</string>
     <string name="manubook_add_account">Thêm tài khoản</string>
     <string name="manubook_account_wrong">Số tài khoản chỉ gồm 6 đến 20 chữ số.</string>
     <string name="manubook_need_account">Hãy nhập ít nhất một số tài khoản.</string>
-
     <string name="manubook_save">Lưu và bật chuyển tin</string>
     <string name="manubook_saved">Đã lưu.</string>
 
-    <string name="manubook_last_sms">Tin gửi gần nhất: %1$s, %2$s</string>
-    <string name="manubook_last_sms_none">Chưa gửi tin nào.</string>
-    <string name="manubook_last_beat">Tín hiệu gần nhất: %1$s, %2$s</string>
-    <string name="manubook_last_beat_none">Chưa gửi tín hiệu.</string>
-    <string name="manubook_answer_ok">Manubook đã nhận</string>
-    <string name="manubook_answer_none">không có mạng</string>
-    <string name="manubook_key_revoked">Mã đã bị thu hồi. Hãy gọi người cài đặt.</string>
-    <string name="manubook_version">Phiên bản %1$s</string>
+    <string name="manubook_row_sms">Quyền đọc tin nhắn</string>
+    <string name="manubook_row_sms_path">Cài đặt → Ứng dụng → Manubook SMS → Quyền → Tin nhắn SMS → Cho phép</string>
+    <string name="manubook_row_notify">Thông báo</string>
+    <string name="manubook_row_notify_path">Cài đặt → Ứng dụng → Manubook SMS → Thông báo</string>
+    <string name="manubook_row_battery">Pin: Không hạn chế</string>
+    <string name="manubook_row_battery_path">Cài đặt → Ứng dụng → Manubook SMS → Pin → Không hạn chế</string>
+    <string name="manubook_row_unused">Xóa quyền nếu không dùng ứng dụng: tắt</string>
+    <string name="manubook_row_unused_path">Cài đặt → Ứng dụng → Manubook SMS → Xóa quyền nếu không dùng ứng dụng → tắt</string>
+    <string name="manubook_open_settings">Mở Cài đặt. Làm theo: %1$s</string>
+
+    <string name="manubook_row_test">Gửi thử</string>
+    <string name="manubook_send_test">Gửi</string>
+    <string name="manubook_test_none">Chưa gửi thử.</string>
+    <string name="manubook_test_sending">Đang gửi…</string>
+    <string name="manubook_test_ok">%1$s: Manubook đã nhận. Kiểm tra Tin thử trên Manubook.</string>
+    <string name="manubook_test_offline">%1$s: Chưa có mạng.</string>
+    <string name="manubook_test_error">%1$s: Manubook trả lời lỗi %2$d.</string>
+    <string name="manubook_need_setup">Hãy lưu mã và số tài khoản trước.</string>
+
+    <string name="manubook_notice_channel">Cài đặt cần sửa</string>
+    <string name="manubook_notice">Manubook SMS cần được cấp lại quyền — chạm để sửa</string>
 
     <string name="manubook_licences">Giấy phép</string>
     <string name="manubook_close">Đóng</string>

@@ -10,7 +10,9 @@ export GH_CONFIG_DIR="${GH_CONFIG_DIR:-$HOME/.config/gh-personal}"
 test -f "$keystore" || { echo "keystore not found: $keystore"; exit 1; }
 base64 -i "$keystore" | tr -d '\n' | gh secret set MANUBOOK_KEYSTORE_B64 --repo "$repo" --env release
 printf '%s' manubook-sms | gh secret set MANUBOOK_KEY_ALIAS --repo "$repo" --env release
-trap 'stty echo' EXIT INT TERM
+# Echo comes back however the script ends; Ctrl-C or a kill also stops it.
+trap 'stty echo' EXIT
+trap 'exit 130' INT TERM
 printf 'Keystore password (hidden): '
 stty -echo
 read -r password

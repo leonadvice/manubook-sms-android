@@ -7,6 +7,8 @@
 
     <!-- Target SDK 34+: the foreground service must name its type. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <!-- The checklist's battery row: one system dialog for *Không hạn chế*. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <application
         android:allowBackup="false"
@@ -38,8 +40,11 @@
             <intent-filter tools:node="removeAll" />
         </activity>
 
+        <!-- Handles rotation itself, so a scanned but unsaved code and typed account
+             numbers are not lost when the screen turns. -->
         <activity
             android:name="online.manubook.sms.SetupActivity"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden|navigation"
             android:exported="true"
             android:theme="@style/ManubookTheme">
             <intent-filter>
@@ -47,6 +52,22 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Upstream's SMS receiver is replaced by its subclass, which also records
+             when the latest matching SMS was caught (lastSmsAt). -->
+        <receiver
+            android:name="tech.bogomolov.incomingsmsgateway.SmsBroadcastReceiver"
+            tools:node="remove" />
+
+        <receiver
+            android:name="online.manubook.sms.ManubookSmsReceiver"
+            android:enabled="true"
+            android:exported="true"
+            android:permission="android.permission.BROADCAST_SMS">
+            <intent-filter android:priority="999">
+                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+            </intent-filter>
+        </receiver>
 
         <receiver
             android:name="online.manubook.sms.BeatAlarmReceiver"

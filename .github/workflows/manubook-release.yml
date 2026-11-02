@@ -42,7 +42,7 @@ jobs:
           echo "name=$name" >> "$GITHUB_OUTPUT"
           echo "code=$code" >> "$GITHUB_OUTPUT"
 
-      # AGP creates unit-test tasks for the debug build type only.
+      # AGP creates unit-test tasks for the tested build type (debug) only.
       - name: Unit tests
         run: ./gradlew testManubookDebugUnitTest
 

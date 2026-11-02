@@ -27,6 +27,11 @@ public final class ManubookSetup {
     private ManubookSetup() {
     }
 
+    /**
+     * Saves the code and accounts, starts forwarding and arms the beat, and resends
+     * SMS that failed with an old key. It sends no beat: the caller asks for the
+     * permissions first and beats after the answer.
+     */
     public static void apply(Context context, SetupCode code, List<String> accounts) {
         for (ForwardingConfig old : ForwardingConfig.getAll(context)) {
             old.remove();
@@ -39,7 +44,8 @@ public final class ManubookSetup {
         new ManubookSettings(context).saveSetup(code, accounts);
 
         startService(context);
-        Beat.start(context);
+        Beat.schedule(context);
+        FailedResend.run(context, false);
     }
 
     static ForwardingConfig rule(Context context, SetupCode code, List<String> accounts) {

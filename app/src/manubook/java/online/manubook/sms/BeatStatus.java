@@ -1,10 +1,13 @@
 package online.manubook.sms;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
@@ -13,8 +16,6 @@ import java.util.regex.Pattern;
  * 32). The server refuses the whole status when one field is bad, so every optional
  * field is checked here against the server's pattern and left out when it fails.
  * Required fields are cleaned instead, so a status is always readable.
- * <p>
- * W6a sends the fields below; W6b adds unusedExempt, lastSmsAt and smsOff.
  */
 public final class BeatStatus {
 
@@ -35,12 +36,15 @@ public final class BeatStatus {
         public Boolean sms;
         public Boolean notify;
         public Boolean battery;
+        public Boolean unusedExempt;
         public Boolean bgRestricted;
         public Integer bucket;
         public Integer pending;
         public Integer failed;
         public String lastError;
         public long lastErrorAt;
+        public long lastSmsAt;
+        public List<SmsOffPeriods.Period> smsOff = new ArrayList<>();
     }
 
     private BeatStatus() {
@@ -57,6 +61,7 @@ public final class BeatStatus {
         putIfKnown(json, "sms", s.sms);
         putIfKnown(json, "notify", s.notify);
         putIfKnown(json, "battery", s.battery);
+        putIfKnown(json, "unusedExempt", s.unusedExempt);
         putIfKnown(json, "bgRestricted", s.bgRestricted);
         if (s.bucket != null && s.bucket >= 5 && s.bucket <= 50) {
             json.put("bucket", s.bucket);
@@ -67,6 +72,18 @@ public final class BeatStatus {
             json.put("lastError", s.lastError);
             json.put("lastErrorAt", instant(s.lastErrorAt));
         }
+        if (s.lastSmsAt > 0) {
+            json.put("lastSmsAt", instant(s.lastSmsAt));
+        }
+        JSONArray off = new JSONArray();
+        // At most 5, oldest first; a clock moved back must not give a "to" before "from".
+        int skip = Math.max(0, s.smsOff.size() - SmsOffPeriods.MAX);
+        for (SmsOffPeriods.Period p : s.smsOff.subList(skip, s.smsOff.size())) {
+            JSONObject period = new JSONObject().put("from", instant(p.from));
+            period.put("to", p.to == 0 ? JSONObject.NULL : instant(Math.max(p.to, p.from)));
+            off.put(period);
+        }
+        json.put("smsOff", off);
         return json.toString();
     }
 
