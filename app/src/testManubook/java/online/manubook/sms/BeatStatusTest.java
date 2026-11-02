@@ -38,7 +38,28 @@ public class BeatStatusTest {
         s.failed = 2;
         s.lastError = "HTTP_401";
         s.lastErrorAt = 1760494360123L;
+        s.unusedExempt = true;
+        s.lastSmsAt = 1760494300000L;
+        s.smsOff = SmsOffPeriods.parse("1760490000000:1760491000000,1760492000000:0", 0).list();
         return s;
+    }
+
+    // Every field at its longest: still within the server's 1,024 bytes.
+    private static BeatStatus.Snapshot longest() {
+        BeatStatus.Snapshot s = full();
+        s.version = repeat('9', 32);
+        s.build = Integer.MAX_VALUE;
+        s.os = repeat('9', 32);
+        s.osBuild = repeat('9', 64);
+        s.pending = 100000;
+        s.failed = 100000;
+        s.lastError = repeat('E', 40);
+        s.smsOff = SmsOffPeriods.parse("1:2,3:4,5:6,7:8,9:10,11:12", 0).list();
+        return s;
+    }
+
+    private static String repeat(char c, int n) {
+        return new String(new char[n]).replace('\0', c);
     }
 
     @Test
@@ -58,7 +79,31 @@ public class BeatStatusTest {
             String key = keys.next();
             assertTrue(key, FIELDS.contains(key));
         }
+        assertTrue(json.getBoolean("unusedExempt"));
+        assertTrue(INSTANT.matcher(json.getString("lastSmsAt")).matches());
+        assertEquals(2, json.getJSONArray("smsOff").length());
+        JSONObject closed = json.getJSONArray("smsOff").getJSONObject(0);
+        assertTrue(INSTANT.matcher(closed.getString("from")).matches());
+        assertTrue(INSTANT.matcher(closed.getString("to")).matches());
+        assertTrue(json.getJSONArray("smsOff").getJSONObject(1).isNull("to"));
         assertTrue(BeatStatus.toJson(full()).getBytes("UTF-8").length <= 1024);
+    }
+
+    @Test
+    public void testLongestStatusFits() throws Exception {
+        String body = BeatStatus.toJson(longest());
+        assertTrue(body.length() + " bytes", body.getBytes("UTF-8").length <= 1024);
+        assertEquals(SmsOffPeriods.MAX, new JSONObject(body).getJSONArray("smsOff").length());
+    }
+
+    @Test
+    public void testNothingKnownLeavesOptionalFieldsOut() throws Exception {
+        BeatStatus.Snapshot s = full();
+        s.lastSmsAt = 0;
+        s.smsOff = new java.util.ArrayList<>();
+        JSONObject json = new JSONObject(BeatStatus.toJson(s));
+        assertFalse(json.has("lastSmsAt"));
+        assertEquals(0, json.getJSONArray("smsOff").length());
     }
 
     @Test

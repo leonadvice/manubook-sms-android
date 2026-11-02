@@ -1,17 +1,12 @@
 package online.manubook.sms;
 
-import android.Manifest;
-import android.app.ActivityManager;
 import android.app.AlarmManager;
-import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.usage.UsageStatsManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
 import android.os.Build;
-import android.os.PowerManager;
 import android.os.SystemClock;
 import android.util.Log;
 
@@ -73,19 +68,33 @@ public final class Beat {
     }
 
     /**
-     * Starts the beat after setup, a reboot or an app update: one beat as soon as
-     * the network allows, the alarm, and the watchdog.
+     * Starts the beat after a reboot or an app update: one beat as soon as the
+     * network allows, the alarm, and the watchdog.
      */
     public static void start(Context context) {
+        schedule(context);
+        now(context);
+    }
+
+    /**
+     * Arms the alarm and the watchdog with no beat now. Setup uses it: the first
+     * beat waits for the permission answers, so it never reports a setting the
+     * person is about to allow (S21+ probe, false phone_sms_off alert).
+     */
+    public static void schedule(Context context) {
         arm(context);
-        enqueueRetry(context, 0, 0, ExistingWorkPolicy.REPLACE);
-        // The first check waits an hour: a check now would race the beat just queued.
+        // The first check waits an hour: a check now would race the first beat.
         PeriodicWorkRequest watchdog =
                 new PeriodicWorkRequest.Builder(BeatWatchdogWorker.class, 1, TimeUnit.HOURS)
                         .setInitialDelay(1, TimeUnit.HOURS)
                         .build();
         WorkManager.getInstance(context)
                 .enqueueUniquePeriodicWork(WATCHDOG_WORK, ExistingPeriodicWorkPolicy.KEEP, watchdog);
+    }
+
+    /** One beat as soon as the network allows, replacing a pending retry. */
+    public static void now(Context context) {
+        enqueueRetry(context, 0, 0, ExistingWorkPolicy.REPLACE);
     }
 
     /**
@@ -104,7 +113,7 @@ public final class Beat {
         if (sinceLast > STALE_MILLIS) {
             Log.i(TAG, "beat overdue, restarting");
             arm(context);
-            enqueueRetry(context, 0, 0, ExistingWorkPolicy.REPLACE);
+            now(context);
         } else if (alarmIntent(context, PendingIntent.FLAG_NO_CREATE) == null) {
             Log.i(TAG, "alarm missing, re-arming");
             armIn(context, Math.max(0, INTERVAL_MILLIS - sinceLast));
@@ -151,9 +160,11 @@ public final class Beat {
     }
 
     /**
-     * Posts one status beat; call off the main thread. It waits up to 1 second for
-     * the pending count, then up to 5 seconds each to connect and to read the
-     * answer, plus the DNS lookup.
+     * Posts one status beat; call off the main thread. First it resends SMS that
+     * failed with an old key. It waits up to 1 second each for the unused-app
+     * status and the pending count, then up to 5 seconds each to connect and to
+     * read the answer, plus the DNS lookup. It also shows or clears the settings
+     * notice.
      *
      * @return the HTTP status, or -1 when no answer arrived or the app is not set up
      */
@@ -163,10 +174,14 @@ public final class Beat {
         if (beatUrl == null) {
             return -1;
         }
+        FailedResend.run(context, false);
+        PhoneChecks checks = PhoneChecks.read(context);
+        SettingsNotice.update(context, checks);
+        BeatStatus.Snapshot snapshot = snapshot(context, settings, checks);
         int code = -1;
         HttpURLConnection connection = null;
         try {
-            byte[] body = BeatStatus.toJson(snapshot(context, settings)).getBytes(StandardCharsets.UTF_8);
+            byte[] body = BeatStatus.toJson(snapshot).getBytes(StandardCharsets.UTF_8);
             connection = (HttpURLConnection) new URL(beatUrl).openConnection();
             connection.setConnectTimeout(TIMEOUT_MILLIS);
             connection.setReadTimeout(TIMEOUT_MILLIS);
@@ -186,23 +201,27 @@ public final class Beat {
                 connection.disconnect();
             }
         }
-        settings.recordBeat(System.currentTimeMillis(), code);
+        if (code == 204) {
+            settings.acknowledgeSmsOff(snapshot.smsOff);
+        }
+        settings.recordBeat(System.currentTimeMillis(), code, checks.signature());
         Log.i(TAG, "beat answered " + code);
         return code;
     }
 
-    static BeatStatus.Snapshot snapshot(Context context, ManubookSettings settings) {
+    static BeatStatus.Snapshot snapshot(Context context, ManubookSettings settings, PhoneChecks checks) {
         BeatStatus.Snapshot s = new BeatStatus.Snapshot();
         s.version = BuildConfig.VERSION_NAME;
         s.build = BuildConfig.VERSION_CODE;
         s.os = Build.VERSION.RELEASE;
         s.osBuild = Build.DISPLAY;
         s.patch = Build.VERSION.SECURITY_PATCH;
-        s.sms = context.checkSelfPermission(Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED;
-        s.notify = context.getSystemService(NotificationManager.class).areNotificationsEnabled();
-        s.battery = context.getSystemService(PowerManager.class).isIgnoringBatteryOptimizations(context.getPackageName());
+        s.sms = checks.sms;
+        s.notify = checks.notify;
+        s.battery = checks.battery;
+        s.unusedExempt = checks.unusedExempt;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            s.bgRestricted = context.getSystemService(ActivityManager.class).isBackgroundRestricted();
+            s.bgRestricted = checks.bgRestricted;
             s.bucket = context.getSystemService(UsageStatsManager.class).getAppStandbyBucket();
         }
         s.pending = pendingDeliveries(context);
@@ -210,12 +229,14 @@ public final class Beat {
         DeliveryResult delivery = DeliveryResult.load(context);
         s.lastError = delivery.getLastError();
         s.lastErrorAt = delivery.getLastErrorAt();
+        s.lastSmsAt = settings.getLastSmsAt();
+        s.smsOff = settings.observeSms(Boolean.TRUE.equals(checks.sms), System.currentTimeMillis());
         return s;
     }
 
     // SMS caught and not yet accepted: upstream's delivery jobs still queued or
     // running, found by the worker-class tag WorkManager adds to every request.
-    private static Integer pendingDeliveries(Context context) {
+    static Integer pendingDeliveries(Context context) {
         try {
             List<WorkInfo> jobs = WorkManager.getInstance(context)
                     .getWorkInfosByTag(RequestWorker.class.getName()).get(1, TimeUnit.SECONDS);

@@ -33,8 +33,8 @@ android {
             applicationId 'online.manubook.sms'
             minSdkVersion 26
             targetSdkVersion 35
-            versionCode 4
-            versionName '0.1.3'
+            versionCode 5
+            versionName '0.2.0'
             // The app is Vietnamese only: drop upstream's other locales.
             resConfigs 'vi'
             // The release build accepts setup codes for this host only (E30).
@@ -50,6 +50,8 @@ android {
 dependencies {
     // Target SDK 35 needs a WorkManager that knows Android 14+ rules.
     manubookImplementation 'androidx.work:work-runtime:2.9.1'
+    // The unused-app status and its settings screen (PackageManagerCompat, IntentCompat).
+    manubookImplementation 'androidx.core:core:1.9.0'
     // Google code scanner: Google's own scan screen, no camera permission.
     manubookImplementation 'com.google.android.gms:play-services-code-scanner:16.1.0'
 
