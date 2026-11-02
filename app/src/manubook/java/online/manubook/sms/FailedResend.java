@@ -21,9 +21,10 @@ import tech.bogomolov.incomingsmsgateway.RequestWorker;
  * upstream's failed-message store. Each one is rewritten with the current address
  * and key, handed to WorkManager, and only then removed from the store, one at a
  * time. (WorkManager writes the job to its database on its own thread, so a crash
- * in the moment between the two steps could still lose that one SMS.) Resending is safe: Manubook answers duplicate for an SMS it already
- * has. It runs at setup and at every beat, which also catches SMS that were still
- * queued with the old key when the new code was saved. SMS that failed with the
+ * in the moment between the two steps could still lose that one SMS.) Resending
+ * is safe: Manubook answers duplicate for an SMS it already has. It runs at every
+ * beat, including the one after a new code, which also catches SMS that were
+ * still queued with the old key when the new code was saved. SMS that failed with the
  * current key stay where they are until someone presses *Gửi lại* on the status
  * screen, which resends every stored one.
  */

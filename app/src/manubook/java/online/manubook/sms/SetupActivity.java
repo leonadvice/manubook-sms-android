@@ -102,8 +102,10 @@ public class SetupActivity extends Activity {
     // Between Lưu and the permission answer no beat is sent.
     private boolean awaitingPermissions;
     private boolean testing;
-    // Until the first read, every row shows not done.
+    // Until the first read, every row shows not done and the status makes no claim
+    // about the settings.
     private PhoneChecks checks = unread();
+    private boolean checksRead;
     private Integer pending;
     private int failed;
 
@@ -360,6 +362,9 @@ public class SetupActivity extends Activity {
         super.onRequestPermissionsResult(requestCode, permissions, results);
         if (requestCode == REQUEST_SETUP_PERMISSIONS) {
             awaitingPermissions = false;
+            // Always beat after saving: a beat still running with the old key may
+            // have written its settings back after the save cleared them.
+            Beat.now(this);
         } else if (permissions.length > 0 && results.length > 0
                 && results[0] != PackageManager.PERMISSION_GRANTED
                 && !shouldShowRequestPermissionRationale(permissions[0])) {
@@ -448,6 +453,7 @@ public class SetupActivity extends Activity {
                     return;
                 }
                 checks = read;
+                checksRead = true;
                 pending = queued;
                 failed = stored;
                 if (settings.isSetUp() && !awaitingPermissions
@@ -467,6 +473,8 @@ public class SetupActivity extends Activity {
             status.setText(R.string.manubook_status_not_set_up);
         } else if (keyRevoked(settings)) {
             status.setText(R.string.manubook_key_revoked);
+        } else if (!checksRead) {
+            status.setText(null);
         } else if (Boolean.FALSE.equals(checks.sms)) {
             status.setText(R.string.manubook_status_no_sms);
         } else if (!checks.allOk()) {
