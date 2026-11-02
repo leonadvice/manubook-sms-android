@@ -14,8 +14,8 @@ import org.junit.runner.RunWith;
  * These assert the exact HTTP status read from the server, which is the behavior the
  * old code could not observe: on a 404 it called getInputStream() and threw
  * FileNotFoundException before ever reading the status. Now the code is read via
- * getResponseCode() and the error body drained from getErrorStream(), so a 4xx/5xx
- * maps to a retry while the actual status is captured (and logged).
+ * getResponseCode() and the error body drained from getErrorStream(), so the actual
+ * status is captured (and logged). A 4xx other than 408/429 is final; 5xx retries.
  * <p>
  * Hits httpbin.org, so it needs a network-connected device/emulator.
  */
@@ -34,8 +34,17 @@ public class RequestResponseCodeTest {
     public void testNotFoundCodeCaptured() {
         Request request = new Request("https://httpbin.org/status/404", "{}");
 
-        assertThat(request.execute(), is(Request.RESULT_RETRY));
+        assertThat(request.execute(), is(Request.RESULT_ERROR));
         assertThat(request.getResponseCode(), is(404));
+        assertThat(request.getErrorClass(), is("HTTP_404"));
+    }
+
+    @Test
+    public void testTooManyRequestsRetries() {
+        Request request = new Request("https://httpbin.org/status/429", "{}");
+
+        assertThat(request.execute(), is(Request.RESULT_RETRY));
+        assertThat(request.getResponseCode(), is(429));
     }
 
     @Test

@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+> **Manubook fork:** read [AGENTS.md](AGENTS.md) first. It says how this fork differs from upstream and how it is worked on.
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## What this is

@@ -1,0 +1,82 @@
+# Signed Manubook SMS release (contract §5): on a tag v<versionName> only. The
+# signing secrets live in the `release` environment, which only v* tags may use
+# and which waits for the owner's approval. Pull requests and branches never
+# reach it.
+name: Manubook release
+
+on:
+  push:
+    tags: [ 'v*' ]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build, sign, verify and publish
+    runs-on: ubuntu-latest
+    environment: release
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Tag is on master
+        run: |
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/master
+
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+
+      - name: Read the version
+        id: version
+        run: |
+          name=$(sed -n "s/^ *versionName '\(.*\)'$/\1/p" app/manubook.gradle)
+          code=$(sed -n "s/^ *versionCode \([0-9]*\)$/\1/p" app/manubook.gradle)
+          test -n "$name" && test -n "$code"
+          test "$GITHUB_REF_NAME" = "v$name" || { echo "tag $GITHUB_REF_NAME does not match versionName $name"; exit 1; }
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+
+      - name: Unit tests
+        run: ./gradlew testManubookReleaseUnitTest
+
+      - name: Build the signed APK
+        env:
+          KEYSTORE_B64: ${{ secrets.MANUBOOK_KEYSTORE_B64 }}
+          MANUBOOK_KEYSTORE_PASSWORD: ${{ secrets.MANUBOOK_KEYSTORE_PASSWORD }}
+          MANUBOOK_KEY_ALIAS: ${{ secrets.MANUBOOK_KEY_ALIAS }}
+        run: |
+          export MANUBOOK_KEYSTORE_FILE="$RUNNER_TEMP/release.jks"
+          printf '%s' "$KEYSTORE_B64" | base64 -d > "$MANUBOOK_KEYSTORE_FILE"
+          ./gradlew assembleManubookRelease
+          rm -f "$MANUBOOK_KEYSTORE_FILE"
+
+      - name: Verify the signing certificate
+        id: apk
+        run: |
+          apk=app/build/outputs/apk/manubook/release/app-manubook-release.apk
+          apksigner=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner
+          "$apksigner" verify --verbose "$apk" | grep -E "Verified using v(2|3) scheme.*: true"
+          actual=$("$apksigner" verify --print-certs "$apk" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | tr 'a-f' 'A-F' | sed 's/../&:/g; s/:$//')
+          expected=$(cat manubook/signing-cert-sha256.txt)
+          test "$actual" = "$expected" || { echo "signed with an unexpected certificate"; exit 1; }
+          out="manubook-sms-${{ steps.version.outputs.name }}.apk"
+          cp "$apk" "$out"
+          sha256sum "$out" > "$out.sha256"
+          echo "file=$out" >> "$GITHUB_OUTPUT"
+
+      - name: Publish the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          flags=""
+          case "${{ steps.version.outputs.name }}" in 0.*) flags="--prerelease" ;; esac
+          gh release create "$GITHUB_REF_NAME" $flags \
+            --title "Manubook SMS ${{ steps.version.outputs.name }}" \
+            --notes "versionCode: ${{ steps.version.outputs.code }}" \
+            "${{ steps.apk.outputs.file }}" "${{ steps.apk.outputs.file }}.sha256"

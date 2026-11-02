@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Manubook fork: upstream findings the manubook flavor does not reach. Each is
+     ignored for its one upstream file only, so the same finding still fails in
+     any other file. -->
+<lint>
+    <!-- Upstream's rule editor dialog; our flavor never opens it. -->
+    <issue id="UnspecifiedRegisterReceiverFlag">
+        <ignore path="src/main/java/tech/bogomolov/incomingsmsgateway/ForwardingConfigDialog.java" />
+    </issue>
+    <!-- A Play Store hint for ChromeOS; the app is not distributed on Play. -->
+    <issue id="PermissionImpliesUnsupportedChromeOsHardware">
+        <ignore path="src/main/AndroidManifest.xml" />
+    </issue>
+</lint>

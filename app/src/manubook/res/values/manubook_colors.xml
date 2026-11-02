@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Manubook brand: deep blue primary, gold dot (docs/brand in Manubook). -->
+    <color name="manubook_primary">#1157A3</color>
+    <color name="manubook_gold">#E6892C</color>
+</resources>

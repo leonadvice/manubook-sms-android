@@ -2,7 +2,7 @@ apply plugin: 'com.android.application'
 
 android {
     namespace 'tech.bogomolov.incomingsmsgateway'
-    compileSdkVersion 33
+    compileSdkVersion 35
 
     defaultConfig {
         applicationId "tech.bogomolov.incomingsmsgateway"
@@ -62,3 +62,7 @@ dependencies {
     androidTestImplementation 'androidx.test:rules:1.5.0'
     androidTestImplementation "androidx.work:work-testing:$work_version"
 }
+
+// Manubook fork: the `manubook` product flavor lives in its own file, so this
+// upstream file differs from upstream by this line and compileSdkVersion only.
+apply from: 'manubook.gradle'

@@ -1,0 +1,106 @@
+# Manubook fork CI: both flavors' unit tests, lint and the release build on every
+# PR and push to master; upstream's instrumented tests on emulators; and a weekly
+# build of the newest upstream master merged into ours (D15). Upstream's own
+# tests.yml is left byte-identical and disabled in this fork.
+# No secret is used here: the release build is unsigned. Signing happens only in
+# manubook-release.yml, from the tag-only `release` environment.
+name: Manubook CI
+
+on:
+  pull_request:
+  push:
+    branches: [ master ]
+  schedule:
+    - cron: '17 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Unit tests, lint, release build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Merge the newest upstream master (weekly run only)
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: |
+          git config user.name "manubook-ci"
+          git config user.email "manubook-ci@users.noreply.github.com"
+          git fetch https://github.com/bogkonstantin/android_income_sms_gateway_webhook.git master
+          git merge --no-edit FETCH_HEAD
+
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+
+      - name: Unit tests (both flavors)
+        run: ./gradlew testUpstreamDebugUnitTest testManubookDebugUnitTest
+
+      - name: Lint (manubook)
+        run: ./gradlew lintManubookDebug
+
+      - name: Release build (manubook, unsigned)
+        run: ./gradlew assembleManubookRelease
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: reports
+          path: app/build/reports
+
+  instrumented:
+    name: Instrumented tests (upstream engine, API ${{ matrix.api-level }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        api-level: [ 30, 35 ]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Merge the newest upstream master (weekly run only)
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: |
+          git config user.name "manubook-ci"
+          git config user.email "manubook-ci@users.noreply.github.com"
+          git fetch https://github.com/bogkonstantin/android_income_sms_gateway_webhook.git master
+          git merge --no-edit FETCH_HEAD
+
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run instrumented tests
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
+        with:
+          api-level: ${{ matrix.api-level }}
+          arch: x86_64
+          target: google_apis
+          script: ./gradlew connectedUpstreamDebugAndroidTest
+
+      - name: Upload instrumented test report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: instrumented-test-report-api${{ matrix.api-level }}
+          path: app/build/reports/androidTests/connected

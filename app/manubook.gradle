@@ -1,0 +1,57 @@
+// Manubook fork: the `manubook` product flavor (Manubook SMS, online.manubook.sms).
+// Applied from the end of app/build.gradle. The `upstream` flavor builds the
+// original app unchanged, so CI keeps proving the shared engine.
+
+android {
+    flavorDimensions 'product'
+
+    signingConfigs {
+        // Release signing for the manubook flavor. CI sets these from the
+        // `release` environment (tag builds only); without them the release
+        // APK is built unsigned.
+        manubookRelease {
+            def storeFilePath = System.getenv('MANUBOOK_KEYSTORE_FILE')
+            if (storeFilePath) {
+                storeFile file(storeFilePath)
+                storePassword System.getenv('MANUBOOK_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('MANUBOOK_KEY_ALIAS')
+                // PKCS12 store: one password covers the store and the key.
+                keyPassword System.getenv('MANUBOOK_KEYSTORE_PASSWORD')
+                enableV1Signing false
+                enableV2Signing true
+                enableV3Signing true
+            }
+        }
+    }
+
+    productFlavors {
+        upstream {
+            dimension 'product'
+        }
+        manubook {
+            dimension 'product'
+            applicationId 'online.manubook.sms'
+            minSdkVersion 26
+            targetSdkVersion 35
+            versionCode 1
+            versionName '0.1.0'
+            // The app is Vietnamese only: drop upstream's other locales.
+            resConfigs 'vi'
+            // The release build accepts setup codes for this host only (E30).
+            buildConfigField 'String', 'MANUBOOK_API_HOST', '"api.manubook.online"'
+            // Only the release build type uses this; debug keeps the debug key.
+            if (System.getenv('MANUBOOK_KEYSTORE_FILE')) {
+                signingConfig signingConfigs.manubookRelease
+            }
+        }
+    }
+}
+
+dependencies {
+    // Target SDK 35 needs a WorkManager that knows Android 14+ rules.
+    manubookImplementation 'androidx.work:work-runtime:2.9.1'
+    // Google code scanner: Google's own scan screen, no camera permission.
+    manubookImplementation 'com.google.android.gms:play-services-code-scanner:16.1.0'
+
+    testManubookImplementation 'org.json:json:20240303'
+}
