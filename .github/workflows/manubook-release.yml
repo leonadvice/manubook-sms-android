@@ -42,8 +42,9 @@ jobs:
           echo "name=$name" >> "$GITHUB_OUTPUT"
           echo "code=$code" >> "$GITHUB_OUTPUT"
 
+      # AGP creates unit-test tasks for the debug build type only.
       - name: Unit tests
-        run: ./gradlew testManubookReleaseUnitTest
+        run: ./gradlew testManubookDebugUnitTest
 
       - name: Build the signed APK
         env:
@@ -60,11 +61,7 @@ jobs:
         id: apk
         run: |
           apk=app/build/outputs/apk/manubook/release/app-manubook-release.apk
-          apksigner=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner
-          "$apksigner" verify --verbose "$apk" | grep -E "Verified using v(2|3) scheme.*: true"
-          actual=$("$apksigner" verify --print-certs "$apk" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | tr 'a-f' 'A-F' | sed 's/../&:/g; s/:$//')
-          expected=$(cat manubook/signing-cert-sha256.txt)
-          test "$actual" = "$expected" || { echo "signed with an unexpected certificate"; exit 1; }
+          manubook/verify-apk.sh "$apk" manubook/signing-cert-sha256.txt
           out="manubook-sms-${{ steps.version.outputs.name }}.apk"
           cp "$apk" "$out"
           sha256sum "$out" > "$out.sha256"

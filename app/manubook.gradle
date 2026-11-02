@@ -6,9 +6,9 @@ android {
     flavorDimensions 'product'
 
     signingConfigs {
-        // Release signing for the manubook flavor. CI sets these from the
-        // `release` environment (tag builds only); without them the release
-        // APK is built unsigned.
+        // Release signing for the manubook flavor. The release workflow sets
+        // these from the `release` environment; PR CI sets them with a
+        // throwaway key. Without them the release APK is built unsigned.
         manubookRelease {
             def storeFilePath = System.getenv('MANUBOOK_KEYSTORE_FILE')
             if (storeFilePath) {
@@ -33,8 +33,8 @@ android {
             applicationId 'online.manubook.sms'
             minSdkVersion 26
             targetSdkVersion 35
-            versionCode 2
-            versionName '0.1.1'
+            versionCode 3
+            versionName '0.1.2'
             // The app is Vietnamese only: drop upstream's other locales.
             resConfigs 'vi'
             // The release build accepts setup codes for this host only (E30).
