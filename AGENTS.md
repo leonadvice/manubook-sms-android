@@ -9,7 +9,7 @@ This repository is `leonadvice/manubook-sms-android`, a public fork of `bogkonst
   - `app/build.gradle`: `compileSdkVersion 35` and `apply from: 'manubook.gradle'`;
   - `Request.java`, `RequestWorker.java`, new `DeliveryResult.java`: 4xx is final except 408 and 429; logs carry no URL, header or exception message that could hold a secret; the last delivery result is recorded;
   - `LICENSE.txt` (our copyright line), this pointer in `CLAUDE.md`.
-- Never edit `.github/workflows/tests.yml`: it stays byte-identical so upstream merges never conflict on it, and it is disabled in this fork. Our CI is `manubook-ci.yml`.
+- Never edit `.github/workflows/tests.yml`: it stays byte-identical so upstream merges never conflict on it. It is disabled in this fork (owner decision, 2026-11-02) because the flavors rename the Gradle tasks it calls; do not re-enable it. Our CI is `manubook-ci.yml`.
 - Design note and contracts: [manubook/README.md](manubook/README.md), [manubook/CONTRACT.md](manubook/CONTRACT.md).
 
 ## Rules
