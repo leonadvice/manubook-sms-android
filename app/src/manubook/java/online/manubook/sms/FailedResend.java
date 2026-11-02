@@ -19,8 +19,9 @@ import tech.bogomolov.incomingsmsgateway.RequestWorker;
  * After a new setup code, resends the SMS that failed with an old key (android
  * review F11). A revoked key answers 401, which is final, so those SMS sit in
  * upstream's failed-message store. Each one is rewritten with the current address
- * and key, queued, and only then removed from the store, one at a time, so a crash
- * loses none. Resending is safe: Manubook answers duplicate for an SMS it already
+ * and key, handed to WorkManager, and only then removed from the store, one at a
+ * time. (WorkManager writes the job to its database on its own thread, so a crash
+ * in the moment between the two steps could still lose that one SMS.) Resending is safe: Manubook answers duplicate for an SMS it already
  * has. It runs at setup and at every beat, which also catches SMS that were still
  * queued with the old key when the new code was saved. SMS that failed with the
  * current key stay where they are until someone presses *Gửi lại* on the status

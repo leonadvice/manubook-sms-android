@@ -66,7 +66,6 @@ public class SetupActivity extends Activity {
     private static final int REQUEST_SETUP_PERMISSIONS = 1;
     private static final int REQUEST_SMS = 2;
     private static final int REQUEST_NOTIFY = 3;
-    private static final int REQUEST_UNUSED = 4;
 
     /** One checklist row: tick, label, detail and its Sửa button. */
     private static final class Row {
@@ -83,8 +82,10 @@ public class SetupActivity extends Activity {
         }
     }
 
-    // One thread reads the settings and sends Gửi thử, off the main thread.
+    // One thread reads the settings; another sends Gửi thử and Gửi lại, so a slow
+    // network never holds up the rows or the beat after a fix.
     private final ExecutorService background = Executors.newSingleThreadExecutor();
+    private final ExecutorService network = Executors.newSingleThreadExecutor();
 
     private SetupCode scannedCode;
     private LinearLayout accountRows;
@@ -101,7 +102,8 @@ public class SetupActivity extends Activity {
     // Between Lưu and the permission answer no beat is sent.
     private boolean awaitingPermissions;
     private boolean testing;
-    private PhoneChecks checks = new PhoneChecks();
+    // Until the first read, every row shows not done.
+    private PhoneChecks checks = unread();
     private Integer pending;
     private int failed;
 
@@ -182,7 +184,17 @@ public class SetupActivity extends Activity {
     @Override
     protected void onDestroy() {
         background.shutdown();
+        network.shutdown();
         super.onDestroy();
+    }
+
+    private static PhoneChecks unread() {
+        PhoneChecks c = new PhoneChecks();
+        c.sms = false;
+        c.notify = false;
+        c.battery = false;
+        c.unusedExempt = false;
+        return c;
     }
 
     private Row row(int containerId, int labelId, View.OnClickListener fix) {
@@ -336,8 +348,7 @@ public class SetupActivity extends Activity {
 
     private void fixUnused() {
         try {
-            startActivityForResult(
-                    IntentCompat.createManageUnusedAppRestrictionsIntent(this, getPackageName()), REQUEST_UNUSED);
+            startActivity(IntentCompat.createManageUnusedAppRestrictionsIntent(this, getPackageName()));
             showMessage(getString(R.string.manubook_open_settings, getString(R.string.manubook_row_unused_path)));
         } catch (ActivityNotFoundException | UnsupportedOperationException e) {
             openAppInfo(R.string.manubook_row_unused_path);
@@ -359,12 +370,6 @@ public class SetupActivity extends Activity {
                 openAppInfo(R.string.manubook_row_notify_path);
             }
         }
-        refresh();
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
         refresh();
     }
 
@@ -393,10 +398,13 @@ public class SetupActivity extends Activity {
         }
         testing = true;
         showState();
-        background.execute(() -> {
+        network.execute(() -> {
             int answer = TestMessage.send(code.batchUrl(), code.authorization, accounts.get(0));
             new ManubookSettings(this).recordTest(System.currentTimeMillis(), answer, code.keyTail());
             runOnUiThread(() -> {
+                if (isDestroyed()) {
+                    return;
+                }
                 testing = false;
                 showState();
             });
@@ -406,9 +414,12 @@ public class SetupActivity extends Activity {
     // ---- Gửi lại ----
 
     private void resend() {
-        background.execute(() -> {
+        network.execute(() -> {
             int queued = FailedResend.run(this, true);
             runOnUiThread(() -> {
+                if (isDestroyed()) {
+                    return;
+                }
                 showMessage(getString(R.string.manubook_resent, queued));
                 refresh();
             });
@@ -477,14 +488,15 @@ public class SetupActivity extends Activity {
         List<String> accounts = settings.getAccounts();
         show(accountsRow, setUp && !accounts.isEmpty(), accounts.isEmpty()
                 ? getString(R.string.manubook_accounts_none) : String.join(", ", accounts), setUp && !editing);
-        // A setting row says where to fix it only while it is wrong.
-        boolean sms = Boolean.TRUE.equals(checks.sms);
+        // A setting row says where to fix it only while it is wrong; one the phone
+        // could not read counts as right, as in PhoneChecks.allOk().
+        boolean sms = !Boolean.FALSE.equals(checks.sms);
         show(smsRow, sms, sms ? null : getString(R.string.manubook_row_sms_path), !sms);
-        boolean notify = Boolean.TRUE.equals(checks.notify);
+        boolean notify = !Boolean.FALSE.equals(checks.notify);
         show(notifyRow, notify, notify ? null : getString(R.string.manubook_row_notify_path), !notify);
         boolean battery = checks.batteryOk();
         show(batteryRow, battery, battery ? null : getString(R.string.manubook_row_battery_path), !battery);
-        boolean unused = Boolean.TRUE.equals(checks.unusedExempt);
+        boolean unused = !Boolean.FALSE.equals(checks.unusedExempt);
         show(unusedRow, unused, unused ? null : getString(R.string.manubook_row_unused_path), !unused);
         show(testRow, setUp && settings.testPassed(), testResult(settings), setUp && !testing);
 

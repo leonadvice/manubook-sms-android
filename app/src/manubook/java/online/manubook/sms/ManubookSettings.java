@@ -49,6 +49,8 @@ public final class ManubookSettings {
                 .putString(KEY_BEAT_URL, code.beatUrl)
                 .putString(KEY_KEY_TAIL, code.keyTail())
                 .putString(KEY_ACCOUNTS, String.join(",", accounts))
+                // A new code always gets a beat once the permissions are answered.
+                .remove(KEY_LAST_BEAT_CHECKS)
                 .apply();
     }
 
