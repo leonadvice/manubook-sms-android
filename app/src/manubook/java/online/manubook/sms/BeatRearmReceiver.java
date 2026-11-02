@@ -5,8 +5,8 @@ import android.content.Context;
 import android.content.Intent;
 
 /**
- * Restarts the beat after a reboot or an app update, and on a clock or time zone
- * change. Alarms do not survive a reboot. After an update the foreground service
+ * Restarts the beat after a reboot or an app update, and re-arms a missing alarm
+ * on a clock or time zone change. Alarms do not survive a reboot. After an update the foreground service
  * is started again here too; after a reboot upstream's BootCompletedReceiver does.
  */
 public class BeatRearmReceiver extends BroadcastReceiver {
